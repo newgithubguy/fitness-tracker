@@ -116,4 +116,5 @@ services:
 ## Notes
 
 - Data is stored in browser localStorage per username.
+- Each user now has saved weekly history. Selecting a different `Week of` date opens that week, and previous weeks can be revisited from the week selector.
 - If users log in from different devices/browsers, data does not sync automatically.

@@ -1,6 +1,8 @@
 const STORAGE_PREFIX = "pulseplan-week-state-v1";
 const USERS_KEY = "pulseplan-users-v1";
 const ACTIVE_USER_KEY = "pulseplan-active-user-v1";
+const WEEK_HISTORY_VERSION = 2;
+const LEGACY_WEEK_KEY = "__legacy_no_week__";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const NUTRITION_CHECKS = [
@@ -103,22 +105,69 @@ const defaultState = () => ({
 });
 
 let activeUserId = "";
+let userData = null;
+let activeWeekKey = LEGACY_WEEK_KEY;
 let state = defaultState();
 
-function loadState() {
+function createEmptyUserData() {
+  return {
+    version: WEEK_HISTORY_VERSION,
+    activeWeekKey: LEGACY_WEEK_KEY,
+    weeks: {}
+  };
+}
+
+function normalizeWeekKey(value) {
+  const raw = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : LEGACY_WEEK_KEY;
+}
+
+function createFreshWeekState(seedState) {
+  const next = defaultState();
+  if (!seedState) {
+    return next;
+  }
+
+  next.profile.name = seedState.profile?.name || "";
+  next.profile.weeklyGoal = seedState.profile?.weeklyGoal || "3";
+  next.nutrition.bodyWeight = seedState.nutrition?.bodyWeight || "";
+  next.nutrition.proteinGoal = seedState.nutrition?.proteinGoal || "";
+  next.nutrition.waterGoal = seedState.nutrition?.waterGoal || "";
+  return next;
+}
+
+function loadUserData() {
   if (!activeUserId) {
-    return defaultState();
+    return createEmptyUserData();
   }
 
   try {
     const raw = localStorage.getItem(storageKeyForUser(activeUserId));
     if (!raw) {
-      return defaultState();
+      return createEmptyUserData();
     }
     const parsed = JSON.parse(raw);
-    return mergeWithDefaults(parsed);
+
+    if (parsed?.version === WEEK_HISTORY_VERSION && parsed?.weeks && typeof parsed.weeks === "object") {
+      const normalized = createEmptyUserData();
+      Object.entries(parsed.weeks).forEach(([weekKey, weekState]) => {
+        normalized.weeks[normalizeWeekKey(weekKey)] = mergeWithDefaults(weekState || {});
+      });
+      const parsedActiveKey = normalizeWeekKey(parsed.activeWeekKey);
+      normalized.activeWeekKey = normalized.weeks[parsedActiveKey]
+        ? parsedActiveKey
+        : Object.keys(normalized.weeks)[0] || LEGACY_WEEK_KEY;
+      return normalized;
+    }
+
+    const migrated = createEmptyUserData();
+    const legacyState = mergeWithDefaults(parsed || {});
+    const weekKey = normalizeWeekKey(legacyState.profile.weekOf);
+    migrated.weeks[weekKey] = legacyState;
+    migrated.activeWeekKey = weekKey;
+    return migrated;
   } catch {
-    return defaultState();
+    return createEmptyUserData();
   }
 }
 
@@ -196,15 +245,62 @@ function mergeWithDefaults(parsed) {
   };
 }
 
-function saveState() {
+function persistUserData() {
   if (!activeUserId) {
     return;
   }
 
-  localStorage.setItem(storageKeyForUser(activeUserId), JSON.stringify(state));
+  userData.weeks[activeWeekKey] = state;
+  userData.activeWeekKey = activeWeekKey;
+  localStorage.setItem(storageKeyForUser(activeUserId), JSON.stringify(userData));
+
   const saveStatus = document.getElementById("saveStatus");
   saveStatus.textContent = `Saved ${new Date().toLocaleTimeString()}`;
   renderAnalytics();
+}
+
+function saveState() {
+  persistUserData();
+}
+
+function weekLabel(weekKey) {
+  if (weekKey === LEGACY_WEEK_KEY) {
+    return "No week date";
+  }
+  return `Week of ${weekKey}`;
+}
+
+function getSortedWeekKeys() {
+  const keys = Object.keys(userData.weeks);
+  return keys.sort((a, b) => {
+    if (a === LEGACY_WEEK_KEY) {
+      return 1;
+    }
+    if (b === LEGACY_WEEK_KEY) {
+      return -1;
+    }
+    return b.localeCompare(a);
+  });
+}
+
+function switchToWeek(targetWeekKey) {
+  const normalizedTarget = normalizeWeekKey(targetWeekKey);
+  if (normalizedTarget === activeWeekKey) {
+    return;
+  }
+
+  userData.weeks[activeWeekKey] = state;
+
+  if (!userData.weeks[normalizedTarget]) {
+    const seeded = createFreshWeekState(state);
+    seeded.profile.weekOf = normalizedTarget === LEGACY_WEEK_KEY ? "" : normalizedTarget;
+    userData.weeks[normalizedTarget] = seeded;
+  }
+
+  activeWeekKey = normalizedTarget;
+  userData.activeWeekKey = normalizedTarget;
+  localStorage.setItem(storageKeyForUser(activeUserId), JSON.stringify(userData));
+  window.location.reload();
 }
 
 function setByPath(path, value) {
@@ -448,7 +544,20 @@ function escapeValue(value) {
 
 function bindBaseFields() {
   bindField("name", "profile.name");
-  bindField("weekOf", "profile.weekOf");
+
+  const weekInput = document.getElementById("weekOf");
+  if (weekInput) {
+    weekInput.value = state.profile.weekOf ?? "";
+    weekInput.addEventListener("change", () => {
+      const nextWeekKey = normalizeWeekKey(weekInput.value);
+      if (nextWeekKey === activeWeekKey) {
+        setByPath("profile.weekOf", weekInput.value);
+        return;
+      }
+      switchToWeek(nextWeekKey);
+    });
+  }
+
   bindField("weeklyGoal", "profile.weeklyGoal");
   bindField("weeklyNotes", "profile.weeklyNotes");
 
@@ -461,13 +570,45 @@ function bindBaseFields() {
   bindField("mealSnacks", "nutrition.mealSnacks");
 }
 
+function renderWeekHistoryControls() {
+  const select = document.getElementById("weekHistorySelect");
+  const openBtn = document.getElementById("openWeekBtn");
+  const createBtn = document.getElementById("newWeekBtn");
+  if (!select || !openBtn || !createBtn) {
+    return;
+  }
+
+  const keys = getSortedWeekKeys();
+  select.innerHTML = keys.map((weekKey) => `
+    <option value="${escapeValue(weekKey)}" ${weekKey === activeWeekKey ? "selected" : ""}>${escapeValue(weekLabel(weekKey))}</option>
+  `).join("");
+
+  openBtn.addEventListener("click", () => {
+    switchToWeek(select.value);
+  });
+
+  createBtn.addEventListener("click", () => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    if (!userData.weeks[todayKey]) {
+      const seeded = createFreshWeekState(state);
+      seeded.profile.weekOf = todayKey;
+      userData.weeks[todayKey] = seeded;
+    }
+    switchToWeek(todayKey);
+  });
+}
+
 function setupReset() {
   document.getElementById("resetBtn").addEventListener("click", () => {
-    const ok = window.confirm("Reset this week's tracker? This cannot be undone.");
+    const ok = window.confirm("Reset only the currently open week? This cannot be undone.");
     if (!ok) {
       return;
     }
     state = defaultState();
+    if (activeWeekKey !== LEGACY_WEEK_KEY) {
+      state.profile.weekOf = activeWeekKey;
+    }
+    state.profile.name = getDisplayNameForUserId(activeUserId);
     saveState();
     window.location.reload();
   });
@@ -527,9 +668,19 @@ function setupAuth() {
   }
 
   activeUserId = remembered;
-  state = loadState();
+  userData = loadUserData();
+  activeWeekKey = normalizeWeekKey(userData.activeWeekKey);
+
+  if (!userData.weeks[activeWeekKey]) {
+    userData.weeks[activeWeekKey] = defaultState();
+  }
+
+  state = mergeWithDefaults(userData.weeks[activeWeekKey]);
   if (!state.profile.name) {
     state.profile.name = getDisplayNameForUserId(activeUserId);
+  }
+  if (activeWeekKey !== LEGACY_WEEK_KEY && !state.profile.weekOf) {
+    state.profile.weekOf = activeWeekKey;
   }
 
   document.getElementById("activeUserLabel").textContent = getDisplayNameForUserId(activeUserId);
@@ -538,6 +689,7 @@ function setupAuth() {
 }
 
 function initTracker() {
+  renderWeekHistoryControls();
   bindBaseFields();
   renderHabits();
   renderWorkoutTables();
