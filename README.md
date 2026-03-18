@@ -63,6 +63,44 @@ One-time setup in GitHub:
 
 This pulls `ghcr.io/newgithubguy/fitness-tracker:latest`.
 
+### Portainer stack file (copy/paste)
+
+```yaml
+services:
+	pulseplan:
+		image: ghcr.io/newgithubguy/fitness-tracker:latest
+		container_name: pulseplan-fitness
+		environment:
+			- TZ=UTC
+		ports:
+			- "8080:8080"
+		healthcheck:
+			test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+			interval: 30s
+			timeout: 3s
+			retries: 3
+			start_period: 10s
+		labels:
+			- com.centurylinklabs.watchtower.enable=true
+		restart: unless-stopped
+```
+
+### Updating in Portainer
+
+1. Push commits to `main` so GitHub Actions publishes a new image.
+2. In Portainer, open the `pulseplan` stack.
+3. Click Pull and redeploy (or Redeploy if already set to pull latest image).
+4. Confirm container health is `healthy`.
+
+### If GHCR image is private
+
+1. Create a GitHub Personal Access Token with `read:packages`.
+2. In Portainer, go to Registries > Add registry.
+3. Registry URL: `ghcr.io`.
+4. Username: your GitHub username.
+5. Password: the token.
+6. Save and redeploy the stack.
+
 ### Option 1: Upload project files
 
 1. In Portainer, go to **Stacks** > **Add stack**.

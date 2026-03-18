@@ -2,6 +2,16 @@ services:
   pulseplan:
     image: ghcr.io/newgithubguy/fitness-tracker:latest
     container_name: pulseplan-fitness
+    environment:
+      - TZ=UTC
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     restart: unless-stopped
