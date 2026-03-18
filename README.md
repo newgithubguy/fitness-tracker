@@ -80,8 +80,6 @@ services:
 			timeout: 3s
 			retries: 3
 			start_period: 10s
-		labels:
-			- com.centurylinklabs.watchtower.enable=true
 		restart: unless-stopped
 ```
 
