@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PulsePlan Fitness Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-shape bg-shape-a"></div>
+  <div class="bg-shape bg-shape-b"></div>
+
+  <main class="app-shell">
+    <section id="authGate" class="card auth-card">
+      <p class="eyebrow">Welcome</p>
+      <h2>Choose a username</h2>
+      <p class="subtitle">No password needed. Each username gets its own saved tracker data.</p>
+      <form id="loginForm" class="login-row">
+        <input id="usernameInput" type="text" placeholder="Enter username" maxlength="30" required>
+        <button type="submit" class="solid">Continue</button>
+      </form>
+      <p id="authStatus" class="auth-status" aria-live="polite"></p>
+      <div id="userPills" class="user-pills"></div>
+    </section>
+
+    <div id="trackerApp" class="hidden">
+      <header class="hero">
+        <p class="eyebrow">Workout + Nutrition Week Planner</p>
+        <h1>PulsePlan</h1>
+        <p class="subtitle">Track workouts, habits, and meals from your weekly PDF in one living dashboard.</p>
+        <div class="session-row">
+          <p class="active-user">Logged in as <strong id="activeUserLabel"></strong></p>
+          <button id="switchUserBtn" class="ghost" type="button">Switch user</button>
+        </div>
+      </header>
+
+    <section class="card profile-grid">
+      <label>
+        Name
+        <input id="name" type="text" placeholder="Your name">
+      </label>
+      <label>
+        Week of
+        <input id="weekOf" type="date">
+      </label>
+      <label>
+        Weekly goal
+        <select id="weeklyGoal">
+          <option value="3">3 workouts</option>
+          <option value="4">4 workouts</option>
+        </select>
+      </label>
+      <label class="wide">
+        Notes / wins
+        <textarea id="weeklyNotes" rows="2" placeholder="What went well this week?"></textarea>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Quick Guidelines</h2>
+      <ul class="guidelines">
+        <li>Warm up 5 minutes (arm circles, marching, light squats).</li>
+        <li>Rest 45-75 seconds between sets.</li>
+        <li>Use controlled tempo: 2-3 sec down, 1 sec pause, smooth up.</li>
+        <li>Progression: add reps, then slow tempo, then add weight.</li>
+        <li>Stop for sharp pain and modify your range of motion.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Weekly Habit Tracker</h2>
+      <div id="habitGrid" class="habit-grid"></div>
+    </section>
+
+    <section class="card">
+      <h2>Workout Logs</h2>
+      <div class="tab-list" id="tabList"></div>
+      <div id="workoutPanels"></div>
+    </section>
+
+    <section class="card nutrition">
+      <h2>Simple Nutrition Guide</h2>
+      <div class="nutrition-targets">
+        <label>Body weight (lb)
+          <input id="bodyWeight" type="number" min="0" step="0.1" placeholder="0">
+        </label>
+        <label>Protein goal (g/day)
+          <input id="proteinGoal" type="number" min="0" step="1" placeholder="0">
+        </label>
+        <label>Water goal (cups/day)
+          <input id="waterGoal" type="number" min="0" step="1" placeholder="0">
+        </label>
+      </div>
+
+      <div class="nutrition-checks" id="nutritionChecks"></div>
+
+      <div class="meal-grid">
+        <label>Breakfast
+          <input id="mealBreakfast" type="text" placeholder="Example: Greek yogurt + berries">
+        </label>
+        <label>Lunch
+          <input id="mealLunch" type="text" placeholder="Example: Chicken bowl + rice + greens">
+        </label>
+        <label>Dinner
+          <input id="mealDinner" type="text" placeholder="Example: Salmon, potato, salad">
+        </label>
+        <label>Snacks
+          <input id="mealSnacks" type="text" placeholder="Example: Protein shake, nuts, fruit">
+        </label>
+      </div>
+    </section>
+
+    <section class="card analytics">
+      <h2>Weekly Progress Analytics</h2>
+      <div class="analytics-grid">
+        <article class="metric-card">
+          <p class="metric-label">Overall completion</p>
+          <div id="overallRing" class="progress-ring" aria-label="Overall completion percentage">
+            <span id="overallPct">0%</span>
+          </div>
+          <p id="overallText" class="metric-note">Start checking off your plan to build momentum.</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Workout days completed</p>
+          <p class="metric-big"><span id="daysCompleted">0</span>/<span id="daysGoal">3</span></p>
+          <p class="metric-note">A day counts when all exercises are marked done.</p>
+        </article>
+
+        <article class="metric-card">
+          <p class="metric-label">Current habit streak</p>
+          <p class="metric-big"><span id="habitStreak">0</span> days</p>
+          <p class="metric-note">Consecutive checked days this week.</p>
+        </article>
+      </div>
+
+      <div class="bar-group" id="analyticsBars"></div>
+      <h3 class="mini-heading">Per-day completion</h3>
+      <div class="bar-group day-bars" id="workoutDayBars"></div>
+    </section>
+
+      <footer class="footer-row">
+        <button id="resetBtn" class="ghost">Reset week</button>
+        <p id="saveStatus" aria-live="polite">Saved</p>
+      </footer>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

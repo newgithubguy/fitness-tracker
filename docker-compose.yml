@@ -1,0 +1,9 @@
+services:
+  pulseplan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pulseplan-fitness
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
