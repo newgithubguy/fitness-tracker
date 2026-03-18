@@ -1,0 +1,7 @@
+services:
+  pulseplan:
+    image: ghcr.io/newgithubguy/fitness-tracker:latest
+    container_name: pulseplan-fitness
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

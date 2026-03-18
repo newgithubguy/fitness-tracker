@@ -35,7 +35,33 @@ docker compose down
 
 App URL: `http://localhost:8080`
 
+## GitHub Actions Docker CI
+
+This repository includes a workflow at `.github/workflows/docker-publish.yml`.
+
+What it does:
+
+- On every push to `main`, it builds and publishes an image to `ghcr.io/newgithubguy/fitness-tracker`.
+- On Git tag pushes like `v1.0.0`, it also publishes tagged images.
+- It also publishes a `latest` tag from the default branch.
+
+One-time setup in GitHub:
+
+1. Open the repository Settings > Actions > General.
+2. Ensure workflows are allowed.
+3. Open Settings > Packages and ensure your package visibility is set as desired.
+4. For Portainer pull access without auth, set the package visibility to Public.
+
 ## Portainer deployment
+
+### Recommended (prebuilt image)
+
+1. In Portainer, go to Stacks > Add stack.
+2. Name it pulseplan.
+3. Paste the contents of `docker-compose.portainer.yml`.
+4. Deploy the stack.
+
+This pulls `ghcr.io/newgithubguy/fitness-tracker:latest`.
 
 ### Option 1: Upload project files
 
